@@ -39,14 +39,14 @@ A self-hosted Discord bot for a private group of friends that monitors CS2 match
 
 ---
 
-## Tech Stack (Proposed)
+## Tech Stack
 
 | Layer | Choice | Rationale |
 |-------|--------|-----------|
 | Runtime | Node.js (TypeScript) | Strong ecosystem for both Discord and Steam APIs |
-| CS2 Data | Steam Web API + `@cwire/csgo` / `steam-user` + `globaloffensive` npm | Access match history and live GC match data |
+| CS2 Data | Steam Web API + `steam-user` + `globaloffensive` npm | Access match history and live GC match data via dedicated Steam bot account |
 | Discord | `discord.js` v14 | Well-maintained, slash command support |
-| Image Generation | `@napi-rs/canvas` or `sharp` + HTML template via `puppeteer` | Render player cards as PNG images |
+| Image Generation | `puppeteer` + HTML/CSS templates | Screenshot-based card rendering; easy to style and iterate visually |
 | Storage | SQLite via `better-sqlite3` | Lightweight, file-based, no infra needed for a friend group |
 | Config | `.env` + JSON config file | Simple secrets + player registry |
 
@@ -67,10 +67,10 @@ A self-hosted Discord bot for a private group of friends that monitors CS2 match
 
 ## Deployment
 
-- Runs as a single long-running Node.js process
-- Can run on any machine (local PC, Raspberry Pi, cheap VPS)
+- Runs as a single long-running Node.js process on a **local machine**
+- Assumes always-on or near-always-on PC (the bot misses matches while it's off)
 - Env vars for all secrets (bot token, Steam credentials, API keys)
-- Optional: Docker container for easy setup
+- `pm2` recommended to keep the process alive and auto-restart on crash/reboot
 
 ---
 

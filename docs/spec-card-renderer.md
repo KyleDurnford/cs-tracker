@@ -116,18 +116,66 @@ async function renderPlayerCard(options: CardRenderOptions): Promise<Buffer>
 
 ---
 
-## Implementation Options
+## Implementation: Puppeteer + HTML/CSS
 
-### Option A: `@napi-rs/canvas` (Recommended for V1)
-- Pure Node.js Canvas API, no browser required
-- Fast, low memory footprint
-- Draw everything programmatically
-- Con: More verbose layout code
+Cards are rendered by generating an HTML string from a template, loading it in a headless Chromium instance via `puppeteer`, and screenshotting the result.
 
-### Option B: `puppeteer` + HTML template
-- Design card as HTML/CSS, screenshot it
-- Easier to style, easier to iterate visually
-- Con: Requires Chromium (~300MB), slower render (~1-2s per card)
-- Good for V2 if visual complexity increases
+### Why Puppeteer
+- Card layout is pure HTML/CSS — easy to iterate visually without recompiling
+- CSS box shadows handle tier glow natively
+- Web fonts (`@font-face`) load from bundled files
+- Flexbox/grid for layout is far less painful than canvas coordinate math
+- Easy to preview cards in a browser during development
 
-**V1 recommendation:** Start with `@napi-rs/canvas` for simplicity and minimal dependencies.
+### Render Flow
+
+```
+1. Build data context object from PlayerMatchStats + ProcessedMatch
+2. Inject into HTML template via string interpolation
+3. Launch puppeteer (reuse single browser instance across renders)
+4. Open new page, setContent(html), wait for fonts/images
+5. page.screenshot({ type: 'png', clip: { width: 800, height: 450 } })
+6. Close page, return Buffer
+```
+
+### Browser Instance Management
+
+- One shared `Browser` instance is created at startup and reused
+- Each card render opens a new `Page`, takes the screenshot, then closes the page
+- Browser is restarted if it crashes (event listener on `disconnected`)
+- Typical render time: ~300–700ms per card on local hardware
+
+### Template Structure
+
+```
+src/
+  renderer/
+    card.template.html   ← master HTML/CSS template with {{placeholders}}
+    card.renderer.ts     ← puppeteer orchestration + template injection
+    assets/
+      fonts/             ← bundled .woff2 font files
+      bg-texture.png     ← dark background texture
+      crosshair.svg      ← watermark overlay
+```
+
+### Template Injection
+
+Simple `{{key}}` placeholder replacement (no template engine dependency):
+
+```typescript
+function injectTemplate(template: string, data: CardTemplateData): string {
+  return template.replace(/\{\{(\w+)\}\}/g, (_, key) => String(data[key] ?? ''));
+}
+```
+
+### Avatar Handling
+
+- Steam avatar URL is fetched and converted to a base64 data URI
+- Embedded directly in the HTML (`<img src="data:image/jpeg;base64,...">`)
+- Avoids puppeteer needing external network access during render
+- Fallback: inline SVG silhouette icon
+
+### Fonts
+
+Bundled locally as `.woff2` files, loaded via `@font-face` in the template CSS.
+Recommended: **Barlow Condensed** (free, Google Fonts, supports weight 400–900).

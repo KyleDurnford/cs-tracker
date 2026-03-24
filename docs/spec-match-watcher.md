@@ -25,6 +25,7 @@ CS2 match data requires two layers:
 - Once we have a share code, decode it to a `matchid`, `outcomeid`, `token`
 - Use the `globaloffensive` npm package (Node.js Steam GC client) to request full match details
 - The GC returns a `matchList` protobuf with per-round, per-player stats
+- **Requires a dedicated Steam bot account** (see below) — the GC client logs in as a Steam user
 
 ---
 
@@ -94,11 +95,35 @@ interface MatchQueueItem {
 
 ---
 
+## Steam Bot Account
+
+The `globaloffensive` GC client must be logged in as a real Steam account. A dedicated throwaway Steam account is strongly recommended so your main account isn't affected by bot activity.
+
+**Setup steps:**
+1. Create a new Steam account at `store.steampowered.com`
+2. Add CS2 to the account (it's free)
+3. Launch CS2 once to initialize the account with the GC (accept the terms)
+4. Enable Steam Guard (Email-based is fine; avoids mobile auth complexity)
+5. Add credentials to `.env` (see below)
+
+**Bot account behavior:**
+- Logs in with `steam-user` (handles auth, sessions, Steam Guard codes)
+- Launches CS2 app via the GC (`globaloffensive` package)
+- Only requests match data — never plays, never connects to game servers
+- The account does NOT need CS2 Prime status
+
+**Steam Guard on first run:**
+- First login will email a code to the bot account's email
+- The bot prompts for the code in the terminal on first run
+- After first login, the session token is saved to `steam-session.json` for reuse
+
 ## Configuration
 
 ```env
 POLL_INTERVAL_SECONDS=300
 STEAM_API_KEY=your_steam_web_api_key
+STEAM_BOT_USERNAME=your_bot_steam_username
+STEAM_BOT_PASSWORD=your_bot_steam_password
 ```
 
 ```json
